@@ -23,22 +23,35 @@ import java.util.stream.Collectors;
 public class ExcelUtils {
     /**
      * excel 转 csv
-     *
      * @param multipartFile
+     * @param excelType
      * @return
      */
-    public static String excelToCsv(MultipartFile multipartFile) {
+    public static String excelToCsv(MultipartFile multipartFile, String excelType) {
 //        File file = null;
 //        try {
 //            file = ResourceUtils.getFile("classpath:网站数据.xlsx");
 //        } catch (FileNotFoundException e) {
 //            e.printStackTrace();
 //        }
+        ExcelTypeEnum excelTypeEnum = null;
+        switch (excelType.toLowerCase()) {
+            case "xls":
+                excelTypeEnum = ExcelTypeEnum.XLS;
+                break;
+            case "xlsx":
+                excelTypeEnum = ExcelTypeEnum.XLSX;
+                break;
+            case "csv":
+                excelTypeEnum = ExcelTypeEnum.CSV;
+                break;
+            default:
+        }
         // 读取数据
         List<Map<Integer, String>> list = null;
         try {
             list = EasyExcel.read(multipartFile.getInputStream())
-                    .excelType(ExcelTypeEnum.XLSX)
+                    .excelType(excelTypeEnum)
                     .sheet()
                     .headRowNumber(0)
                     .doReadSync();
@@ -65,6 +78,6 @@ public class ExcelUtils {
     }
 
     public static void main(String[] args) {
-        excelToCsv(null);
+        excelToCsv(null, "csv");
     }
 }

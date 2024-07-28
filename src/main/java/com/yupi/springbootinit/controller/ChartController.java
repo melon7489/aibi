@@ -255,13 +255,13 @@ public class ChartController {
         ThrowUtils.throwIf(size > maxSize, ErrorCode.PARAMS_ERROR, "文件不能超过" + maxSize);
 
         //校验文件后缀
-        final List<String> validFileSuffixList = Arrays.asList("xlsx", "xls");
+        final List<String> validFileSuffixList = Arrays.asList("xlsx", "xls", "csv");
         String originalFilename = multipartFile.getOriginalFilename();
         String suffix = FileUtil.getSuffix(originalFilename);
         ThrowUtils.throwIf(!validFileSuffixList.contains(suffix), ErrorCode.PARAMS_ERROR, "文件类型错误，仅支持：" + validFileSuffixList.toString());
 
         // 数据压缩 转为文本
-        String data = ExcelUtils.excelToCsv(multipartFile);
+        String data = ExcelUtils.excelToCsv(multipartFile, suffix);
         ThrowUtils.throwIf(StringUtils.isBlank(data), ErrorCode.PARAMS_ERROR, "数据为空");
 
         //给ai提示词并输入数据
@@ -272,7 +272,7 @@ public class ChartController {
 
         //调用ai能力
         String aiGenRes = aiManager.getAiGenRes(1817124107774263298L, userInput.toString().trim());
-        log.debug("aiGenRes: {}", aiGenRes);
+        log.error("aiGenRes: {}", aiGenRes);
         String[] split = aiGenRes.split("【【【【【");
         ThrowUtils.throwIf(split.length < 3, ErrorCode.OPERATION_ERROR, "生成数据失败，请重新生成");
         String genChart = split[1].trim();
