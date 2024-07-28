@@ -19,6 +19,12 @@
         <java.version>1.8</java.version>
     </properties>
     <dependencies>
+        <!--redission-->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.33.0</version>
+        </dependency>
         <!--ai能力-->
         <dependency>
             <groupId>com.yucongming</groupId>
@@ -123,6 +129,11 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-launcher</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
