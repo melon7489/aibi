@@ -7,23 +7,32 @@ import com.yupi.springbootinit.common.BaseResponse;
 import com.yupi.springbootinit.common.DeleteRequest;
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.common.ResultUtils;
+import com.yupi.springbootinit.constant.FileConstant;
 import com.yupi.springbootinit.constant.UserConstant;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.exception.ThrowUtils;
-import com.yupi.springbootinit.model.dto.chart.ChartAddRequest;
-import com.yupi.springbootinit.model.dto.chart.ChartEditRequest;
-import com.yupi.springbootinit.model.dto.chart.ChartQueryRequest;
-import com.yupi.springbootinit.model.dto.chart.ChartUpdateRequest;
+import com.yupi.springbootinit.manager.AiManager;
+import com.yupi.springbootinit.model.dto.chart.*;
+import com.yupi.springbootinit.model.dto.file.UploadFileRequest;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.model.entity.User;
+import com.yupi.springbootinit.model.enums.FileUploadBizEnum;
+import com.yupi.springbootinit.model.vo.BiResponse;
 import com.yupi.springbootinit.service.ChartService;
 import com.yupi.springbootinit.service.UserService;
+import com.yupi.springbootinit.utils.ExcelUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.availability.ApplicationAvailabilityBean;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.util.List;
 
 /**
@@ -42,6 +51,8 @@ public class ChartController {
 
     @Resource
     private UserService userService;
+    @Resource
+    AiManager aiManager;
 
     // region 增删改查
 
@@ -223,6 +234,65 @@ public class ChartController {
         }
         boolean result = chartService.updateById(chart);
         return ResultUtils.success(result);
+    }
+
+    /**
+     * 文件上传
+     *
+     * @param multipartFile
+     * @param chartFileRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen")
+    public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+                                           ChartFileRequest chartFileRequest, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        String name = chartFileRequest.getName();
+        String goal = chartFileRequest.getGoal();
+        String chartType = chartFileRequest.getChartType();
+        //参数校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称为空或过长");
+
+        // 数据压缩 转为文本
+        String data = ExcelUtils.excelToCsv(multipartFile);
+        ThrowUtils.throwIf(StringUtils.isBlank(data), ErrorCode.PARAMS_ERROR, "数据为空");
+
+        //给ai提示词并输入数据
+        StringBuilder userInput = new StringBuilder();
+        userInput.append("分析需求：").append("\n");
+        userInput.append(goal).append(",请使用").append(chartType).append("\n");
+        userInput.append("原始数据：").append("\n").append(data).append("\n");
+
+        //调用ai能力
+        String aiGenRes = aiManager.getAiGenRes(1817124107774263298L, userInput.toString().trim());
+        log.debug("aiGenRes: {}", aiGenRes);
+        String[] split = aiGenRes.split("【【【【【");
+        ThrowUtils.throwIf(split.length < 3, ErrorCode.OPERATION_ERROR, "生成数据失败，请重新生成");
+        String genChart = split[1].trim();
+        String genResult = split[2].trim();
+
+        //存入数据库
+        Chart chart = new Chart();
+        chart.setGoal(goal);
+        chart.setName(name);
+        chart.setChartData(data);
+        chart.setChartType(chartType);
+        chart.setGenChart(genChart);
+        chart.setGenResult(genResult);
+        chart.setUserId(loginUser.getId());
+        boolean save = chartService.save(chart);
+        ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "图表插入异常");
+
+        //封装返回结果
+        BiResponse biResponse = new BiResponse();
+        biResponse.setGenChart(genChart);
+        biResponse.setGenResult(genResult);
+        biResponse.setChartId(chart.getId());
+
+        return ResultUtils.success(biResponse);
     }
 
 }
