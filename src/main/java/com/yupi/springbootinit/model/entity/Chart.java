@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import com.yupi.springbootinit.model.enums.ChartStatusEnum;
 import lombok.Data;
 
 /**
@@ -53,6 +55,16 @@ public class Chart implements Serializable {
      * 创建用户 id
      */
     private Long userId;
+
+    /**
+     * 图表状态
+     */
+    private String status;
+
+    /**
+     * 执行信息
+     */
+    private String execMessage;
 
     /**
      * 创建时间

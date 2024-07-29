@@ -3,6 +3,7 @@ package com.yupi.springbootinit.model.dto.chart;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.yupi.springbootinit.common.PageRequest;
+import com.yupi.springbootinit.model.enums.ChartStatusEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -37,6 +38,17 @@ public class ChartQueryRequest extends PageRequest implements Serializable {
      * 图表类型
      */
     private String chartType;
+
+    /**
+     * 图表状态
+     */
+    private String status;
+
+    /**
+     * 执行信息
+     */
+    private String execMessage;
+
 
     /**
      * 创建用户 id
