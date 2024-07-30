@@ -43,13 +43,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         if(id != null && id > 0) {
             queryWrapper.eq("id", id);
         }
-        queryWrapper.eq(StringUtils.isNotEmpty(goal), "userId", userId);
+        queryWrapper.like(StringUtils.isNotEmpty(goal), "goal", goal);
         queryWrapper.eq(StringUtils.isNotEmpty(chartType), "chartType", chartType);
         queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
-        // 拼接查询条件
-        if (StringUtils.isNotBlank(goal)) {
-            queryWrapper.eq(ObjectUtils.isNotEmpty(userId), "userId", userId);
-        }
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
