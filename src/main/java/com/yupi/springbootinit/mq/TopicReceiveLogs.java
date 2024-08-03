@@ -2,8 +2,8 @@ package com.yupi.springbootinit.mq;
 
 import com.rabbitmq.client.*;
 
-public class DirectReceiveLogs {
-    private static final String EXCHANGE_NAME = "direct";
+public class TopicReceiveLogs {
+    private static final String EXCHANGE_NAME = "topic";
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
@@ -11,10 +11,10 @@ public class DirectReceiveLogs {
         Connection connection = factory.newConnection();
 
         Channel channel1 = connection.createChannel();
-        channel1.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+        channel1.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
         String queueName1 = "one_queue";
         channel1.queueDeclare(queueName1, true, false, false, null);
-        channel1.queueBind(queueName1, EXCHANGE_NAME, "xiaoyu");
+        channel1.queueBind(queueName1, EXCHANGE_NAME, "#.前端.#");
         System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
 
         DeliverCallback deliverCallback = (consumerTag, delivery) -> {
@@ -25,10 +25,10 @@ public class DirectReceiveLogs {
 
 
         Channel channel2 = connection.createChannel();
-        channel2.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+        channel2.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
         String queueName2 = "two_queue";
         channel1.queueDeclare(queueName2, true, false, false, null);
-        channel2.queueBind(queueName2, EXCHANGE_NAME, "xiaopi");
+        channel2.queueBind(queueName2, EXCHANGE_NAME, "#.后端.#");
         System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
         channel2.basicConsume(queueName2, true, deliverCallback, consumerTag -> { });
     }

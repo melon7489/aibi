@@ -7,16 +7,16 @@ import com.rabbitmq.client.ConnectionFactory;
 
 import java.util.Scanner;
 
-public class DirectEmitLog {
+public class TopicEmitLog {
 
-    private static final String EXCHANGE_NAME = "direct";
+    private static final String EXCHANGE_NAME = "topic";
 
     public static void main(String[] argv) throws Exception {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         try (Connection connection = factory.newConnection();
              Channel channel = connection.createChannel()) {
-            channel.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.DIRECT);
+            channel.exchangeDeclare(EXCHANGE_NAME, BuiltinExchangeType.TOPIC);
 
             String message = "";
             Scanner scanner = new Scanner(System.in);
