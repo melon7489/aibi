@@ -49,6 +49,11 @@ spring:
       keepAliveTime: 60
       capacity: 2
       unit: SECONDS
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 server:
   address: 0.0.0.0
   port: 8101

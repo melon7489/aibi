@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.springbootinit.annotation.AuthCheck;
+import com.yupi.springbootinit.bizmq.BiMessageProducer;
 import com.yupi.springbootinit.common.BaseResponse;
 import com.yupi.springbootinit.common.DeleteRequest;
 import com.yupi.springbootinit.common.ErrorCode;
@@ -70,6 +71,10 @@ public class ChartController {
 
     @Resource
     ThreadPoolExecutor threadPoolExecutor;
+
+    @Resource
+    BiMessageProducer biMessageProducer;
+
 
     // region 增删改查
 
@@ -401,6 +406,59 @@ public class ChartController {
         biResponse.setChartId(chart.getId());
         return ResultUtils.success(biResponse);
     }
+
+    @PostMapping("/gen/async/mq")
+    @Transactional
+    public BaseResponse<BiResponse> genChartByAiAsyncMq(@RequestPart("file") MultipartFile multipartFile,
+                                                      ChartFileRequest chartFileRequest, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        //限流器
+        redisLimiterManager.doRateLimiter("genChartByAi_" + loginUser.getId());
+        String name = chartFileRequest.getName();
+        String goal = chartFileRequest.getGoal();
+        String chartType = chartFileRequest.getChartType();
+        //参数校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartType), ErrorCode.PARAMS_ERROR, "图表类型为空");
+        ThrowUtils.throwIf(StringUtils.isBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称为空或过长");
+
+        //校验文件大小
+        long size = multipartFile.getSize();
+        final long maxSize = 1024 * 1024L;//1MB
+        ThrowUtils.throwIf(size > maxSize, ErrorCode.PARAMS_ERROR, "文件不能超过" + maxSize);
+
+        //校验文件后缀
+        final List<String> validFileSuffixList = Arrays.asList("xlsx", "xls", "csv");
+        String originalFilename = multipartFile.getOriginalFilename();
+        String suffix = FileUtil.getSuffix(originalFilename);
+        ThrowUtils.throwIf(!validFileSuffixList.contains(suffix), ErrorCode.PARAMS_ERROR, "文件类型错误，仅支持：" + validFileSuffixList.toString());
+
+        // 数据压缩 转为文本
+        String data = ExcelUtils.excelToCsv(multipartFile, suffix);
+        ThrowUtils.throwIf(StringUtils.isBlank(data), ErrorCode.PARAMS_ERROR, "数据为空");
+
+        //生成结果之前的基本信息存入数据库
+        Chart chart = new Chart();
+        chart.setGoal(goal);
+        chart.setName(name);
+        chart.setChartData(data);
+        chart.setChartType(chartType);
+        chart.setUserId(loginUser.getId());
+        boolean save = chartService.save(chart);
+        ThrowUtils.throwIf(!save, ErrorCode.OPERATION_ERROR, "图表插入异常");
+
+
+
+        //发送chart的主键到消息队列
+        Long id = chart.getId();
+        biMessageProducer.sendMessage("" + id);
+
+        //封装返回结果
+        BiResponse biResponse = new BiResponse();
+        biResponse.setChartId(id);
+        return ResultUtils.success(biResponse);
+    }
+
     // 处理生成图表异常情况
     private void handlerChartUpdateError(long chartId, String execMessage){
         Chart chart = new Chart();
